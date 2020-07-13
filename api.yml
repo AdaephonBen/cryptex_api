@@ -1,0 +1,290 @@
+openapi: 3.0.0
+info:
+  title: Cryptex User and Team API
+  description: The user-facing API(for participants of the CTF) behind Cryptex
+  version: 1.0.0
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /user:
+    put:
+      summary: Update User details
+      description: Update User's full name that is stored in the database. Username and Email ID cannot be updated. Since this is a protected route, the current user's details will be updated. 
+      requestBody:
+        required: true
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+              required:
+                - full_name
+      responses:
+        '200':
+          description: Indicates successful updation of the User's Full Name
+        '400':
+          description: Bad request. Missing or invalid full_name. 
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX': 
+          $ref: "#/components/responses/UnexpectedServerError"
+  /user/{user_id}:
+    get:
+      summary: Get user profile
+      description: Get public user profile of user with user_id
+      responses: 
+        '200': 
+          description: Successfully obtained user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: 
+                  user_id:
+                    type: number
+                  username:
+                    type: string
+                  team_id:
+                    type: number
+                  team_name:
+                    type: string
+        '400':
+          description: Invalid user_id
+        '5XX':
+          $ref: "#/components/responses/UnexpectedServerError"
+  /user/invites:
+    get:
+      summary: Get a list of all pending invites for the authenticated user
+      description: Get an array of all pending invites for the authenticated user
+      responses:
+        '200':
+          description: An array of all pending invites
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  type: object
+                  properties:
+                    team_id: 
+                      type: number
+                    team_name: 
+                      type: string
+                    time:
+                      type: date-time
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedServerError"
+  /user/invites/{team_id}:
+    post:
+      summary: Adds user to team with team_id
+      description: First checks if user has a pending invite from team, then adds user to team.
+      parameters:
+        - name: team_id
+          in: path
+          required: true
+          description: The ID of the team that the user wishes to join
+          schema:
+            type: integer
+            format: int4
+            minimum: 1
+      responses:
+        '200':
+          description: User successfully added to team
+        '400': 
+          description: Invalid team_id or team hasn't invited user yet
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX': 
+          $ref: "#/components/responses/UnexpectedServerError"
+    delete:
+      summary: Deletes invite from team with team_id
+      description: First checks if user has a pending invite from that team, then deletes the invite
+      parameters:
+        - name: team_id
+          in: path
+          required: true
+          description: The ID of the team that sent the invite to be declined
+          schema:
+            type: integer
+            format: int4
+            minimum: 1
+      responses:
+        '200':
+          description: Invite successfully declined
+        '400': 
+          description: Team hasn't invited user yet
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX': 
+          $ref: "#/components/responses/UnexpectedServerError"
+  /user/team/:
+    delete:
+      summary: Leave Team
+      description: User leaves team that they are currently part of
+      responses:
+        '200':
+          description: Team successfully left
+        '400':
+          description: User is not part of any team
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX': 
+          $ref: "#/components/responses/UnexpectedServerError"
+  /team:
+    post:
+      summary: Create Team
+      description: User creates team and changes his current team to the newly created team.
+      requestBody: 
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: 
+                team_name: 
+                  type: string
+      responses:
+        '200':
+          description: Team successfully created
+        '400':
+          description: User already part of team
+        '409':
+          description: Team name already exists
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX': 
+          $ref: "#/components/responses/UnexpectedServerError"
+    put: 
+      summary: Change Team Name
+      description: Change name of team that user is admin of
+      requestBody: 
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: 
+                team_name: 
+                  type: string
+      responses:
+        '200':
+          description: Team successfully renamed
+        '400':
+          description: User is not the admin of any team
+        '409':
+          description: Team name already exists
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX': 
+          $ref: "#/components/responses/UnexpectedServerError"
+    delete: 
+      summary: Delete team
+      description: Delete team that user is currently admin of and changes user's team to his individual team, can be done only if team has no members apart from user
+      responses: 
+        '200':
+          description: Team successfully deleted
+        '400':
+          description: User is not the admin of any team
+        '409':
+          description: Team has members apart from user
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedServerError"
+  /team/{team_id}:
+    get:
+      summary: Get Team Details
+      description: Get team details
+      parameters:
+        - name: team_id
+          in: path
+          description: Team ID of team whose details are to be retreived
+          schema:
+            type: integer
+            format: int4
+            minimum: 1
+      responses:
+        '200':
+          description: Successfuly retreived team details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: 
+                  team_id: 
+                    type: number
+                  team_name:
+                    type: string
+                  number_of_members: 
+                    type: number
+                  members: 
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user_id:
+                          type: number
+                        username:
+                          type: string
+                  team_score:
+                    type: number
+                  is_team_or_individual:
+                    type: boolean
+  /team?skip={skip}&limit={limit}:
+    get:
+      summary: Leaderboard
+      description: Return paginated, sorted list of teams
+      parameters:
+        - name: skip
+          in: query
+          description: Number of teams to skip
+          schema:
+            type: integer
+            format: int4
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          description: Number of teams to return
+          schema: 
+            type: integer
+            format: int4
+            minimum: 0
+            default: 50
+      responses: 
+        '200':
+          description: An array of teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  type: object
+                  properties:
+                    team_id: 
+                      type: number
+                    team_name: 
+                      type: string
+                    team_score:
+                      type: number
+                    number_of_members: 
+                      type: number
+                    is_team_or_individual:
+                      type: boolean
+        '400':
+          description: Invalid skip and limit
+        '5XX':
+          $ref: "#/components/responses/UnexpectedServerError"
+components:
+  responses:
+    UnauthorizedError:
+      description: API key is missing or invalid
+    UnexpectedServerError:
+      description: Unexpected server error
